@@ -1,0 +1,137 @@
+import Mathlib
+
+open Nat
+open BigOperators
+open Finset
+
+/- This file defines abundant, semi-perfect / pseudoperfect, deficient, and weird numbers
+  Abundant := A number is called abundant if its proper divisors add to more than itself
+  SemiPerfect := A number is semi-perfect / pseudoperfect if at least one subset of its proper divisors adds to itself
+  Deficient := A number is deficient if the sum of its proper divisors is less than itself
+  Weird := A number is weird if it is abundant and NOT semi-perfect
+-/
+def Nat.Abundant (n : ℕ) : Prop := ∑ i in Nat.properDivisors n, i > n
+
+def Nat.SemiPerfect (n : ℕ) : Prop := ∃ (s : Finset ℕ), s ∈ Finset.powerset (Nat.properDivisors n) ∧ ∑ i in s, i = n
+
+def Nat.WeirdNumber (n : ℕ) : Prop := Nat.Abundant n ∧ ¬ Nat.SemiPerfect n
+
+def Nat.Deficient (n : ℕ) : Prop := ∑ i in Nat.properDivisors n, i < n
+
+theorem ZeroSemiPerfect : SemiPerfect 0 := by
+  use properDivisors 0; constructor;
+  exact mem_powerset_self (properDivisors 0)
+  exact rfl
+
+theorem OneDeficient : Deficient 1 := by
+  dsimp [Deficient]; simp [*]
+
+theorem DeficientNotAbundantOrPerfect (n : ℕ) (hn : n > 0) : Nat.Deficient n ↔ ¬ (Nat.Abundant n ∨ Nat.Perfect n) := by
+  rw [not_or]; dsimp [Nat.Deficient, Nat.Abundant, Nat.Perfect]; constructor
+  intro h; constructor; intro h1
+  linarith; intro h1; rcases h1 with ⟨h2, h3⟩; linarith; rintro ⟨h1, h2⟩;
+  rw [not_and_or] at h2;
+  have h3 : ∑ i in properDivisors n, i ≤ n := by exact Nat.not_lt.mp h1
+  rcases h2 with h4 | h5
+  exact Nat.lt_of_le_of_ne h3 h4
+  exact (h5 hn).elim
+
+theorem DeficientORPerfectORAbundant (n : ℕ) (hn : n > 0) : Nat.Deficient n ∨ Nat.Abundant n ∨ Nat.Perfect n := by
+  sorry
+
+theorem NotSemiPerfectRw (n : ℕ) :
+  ¬ Nat.SemiPerfect n ↔ ∀ (s : Finset ℕ), s ∈ Finset.powerset (Nat.properDivisors n)
+  → ∑ i in s, i ≠ n := by
+  constructor; intro h; intro s hs; rw [ne_eq]; revert hs; apply not_and.mp; revert s; rw [← not_exists]; exact h
+  intro h1; dsimp [SemiPerfect]; rw [not_exists]; intro x; apply not_and.mpr; intro hx; rw [← ne_eq]; revert x; exact fun x hx => h1 x hx
+
+theorem PerfectimpSemiPerfect (n : ℕ) : Nat.Perfect n → Nat.SemiPerfect n := by
+  dsimp [Nat.Perfect, Nat.SemiPerfect]; intro h; rcases h with ⟨h1, h2⟩
+  use (properDivisors n); refine (and_iff_right ?h.ha).mpr h1
+  exact mem_powerset_self (properDivisors n)
+
+theorem PrimeNotAbundant (n : ℕ) : Nat.Prime n → ¬ Nat.Abundant n := by
+  dsimp [Nat.Prime, Nat.Abundant]; intro h h1;
+  have h3 : ∑ i in properDivisors n, i = 1 := by exact sum_properDivisors_eq_one_iff_prime.mpr h
+  have h4 : n > 1 := by exact Prime.one_lt h
+  have h5 : ∑ i in properDivisors n, i > 1 := by exact Nat.lt_trans h4 h1
+  have h6 : 1 > 1 := by
+    calc
+      1 = ∑ i in properDivisors n, i := by apply Eq.symm h3
+      _ > 1 := by rel [h5]
+  contradiction
+
+theorem NotSemiPerfectNotPerfect (n : ℕ) : ¬ Nat.SemiPerfect n → ¬ Nat.Perfect n := by
+  rw [not_imp_not]; exact PerfectimpSemiPerfect n
+
+theorem PrimeNotSemiPerfect (n : ℕ) : Nat.Prime n → ¬ Nat.SemiPerfect n := by
+  intro h; rw [NotSemiPerfectRw];
+  have h1 : powerset (properDivisors n) = {∅, {1}} := by rw [Prime.properDivisors h]; exact rfl
+  have h2 : n > 1 := by exact Prime.one_lt h
+  rw [h1]; rintro s hs; have hs' : s = ∅ ∨ s = {1} := by exact List.mem_pair.mp hs
+  rcases hs' with hs1 | hs2
+  repeat (first | simp [hs1]; linarith | simp [hs2]; linarith)
+
+theorem PrimeNotPerfect (n : ℕ) : Nat.Prime n → ¬ Nat.Perfect n := by
+  intro h; have h1 : ¬ SemiPerfect n := by exact PrimeNotSemiPerfect n h
+  exact NotSemiPerfectNotPerfect n h1
+
+/- ### Examples ### -/
+#eval Finset.powerset (Nat.properDivisors 8)
+example : SemiPerfect 6 := by
+  dsimp [SemiPerfect]
+  use {1,2,3}
+  constructor
+  exact mem_powerset_self {1, 2, 3}
+  norm_num
+example : SemiPerfect 12 := by
+  dsimp [SemiPerfect]; use {2,4,6}; constructor;
+  have hn : properDivisors 12 = {1,2,3,4,6} := by exact rfl
+  rw [hn]
+  apply Finset.mem_powerset.mpr
+  simp [*]
+  norm_num
+#eval Nat.properDivisors 7
+#eval ∑ i in Nat.properDivisors 7, i
+example : Abundant 70 := by dsimp [Abundant]; norm_num
+example : ¬ SemiPerfect 7 := by
+  dsimp [SemiPerfect]; rw [not_exists]; intro x; apply not_and.mpr
+  have h1 : ¬∑ i in x, i = 7 ↔ ∑ i in x, i ≠ 7 := by exact Iff.rfl
+  intro h2; apply h1.mpr
+  refine Nat.ne_of_lt ?h
+  aesop
+  rw [show properDivisors 7 = {1} by exact rfl] at h2
+  have h3 : x = ∅ ∨ x = {1} := by exact subset_singleton_iff.mp h2
+  rcases h3 with h4 | h5
+  rw [h4]; norm_num
+  rw [h5]; norm_num
+example : ¬ SemiPerfect 4 := by
+  dsimp [SemiPerfect]; rw [not_exists]; rintro x; apply not_and.mpr
+  have h1 : ¬∑ i in x, i = 4 ↔ ∑ i in x, i ≠ 4 := by exact Iff.rfl
+  intro h2; apply h1.mpr; refine Nat.ne_of_lt ?h;
+  rw [show properDivisors 4 = {1,2} by exact rfl] at h2
+  rw [show powerset {1,2} = {∅, {1}, {2}, {1,2}} by exact rfl] at h2
+  have h3 : x ∈ ({∅, {1}, {2}, {1,2}} : Finset (Finset ℕ)) → (x = ∅ ∨ x = {1} ∨ x = {2} ∨ x = {1,2}) := by simp only [mem_singleton, mem_insert, imp_self]
+  have h4 := by apply h3 h2
+  rcases h4 with (h5 | h6) | (h7 | h8)
+  simp [*]; rw [h7]; simp [*]; rcases h8 with h9 | h10
+  rw [h9]; simp [*]; rw [h10]; simp [*]
+example {a b : ℝ} : ¬ (a = b) ↔ a ≠ b := by rw [@not_iff_not]
+example : WeirdNumber 70 := by
+  constructor
+  dsimp [Abundant]
+  norm_num
+  dsimp [SemiPerfect]; rw [not_exists]; rintro x; apply not_and.mpr
+  have h1 : ¬∑ i in x, i = 70 ↔ ∑ i in x, i ≠ 70 := by exact Iff.rfl
+  intro h2; apply h1.mpr; refine Nat.ne_of_lt ?h;
+  rw [show properDivisors 70 = {1, 2, 5, 7, 10, 14, 35} by exact rfl] at h2
+  sorry
+
+example {x : Finset ℕ} : x ∈ ({∅, {1}, {2}, {1,2}} : Finset (Finset ℕ)) ↔ (x = ∅ ∨ x = {1} ∨ x = {2} ∨ x = {1,2}) := by
+  simp only [mem_singleton, mem_insert]
+
+example {x : ℕ} : x ∈ ({1, 3} : Finset ℕ) ↔ x = 1 ∨ x = 3 := by simp only [mem_singleton, mem_insert]
+#eval powerset (properDivisors 70)
+example : Abundant 12 := by
+  dsimp [Abundant]
+  simp [*]
