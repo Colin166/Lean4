@@ -1,0 +1,63 @@
+import Mathlib
+
+open Real
+
+variable (x v a t F m : ℝ)
+
+/- A toy mouse changes speed from a constant 2 m/s to 0 m/s in the span of two seconds. It's mass is
+  estimated to be around 0.1 kg. The toy can only handle two Newtons of force. Prove that the force
+  it experiences is below this limit. -/
+
+example
+  (h1 : F = m * a)
+  (h2 : a = |(vf - v1) / t|)
+  (h3 : vf = 0 ∧ v1 = 2 ∧ t = 2 ∧ m = 0.1)
+  : F < 2 := by
+    rw [h3.1, h3.2.1, h3.2.2.1, sub_eq_neg_add, add_zero, show |-(2:ℝ) / 2| = 1 by norm_num] at h2
+    rw [h3.2.2.2, h2] at h1
+    simp_rw [h1]
+    norm_num
+
+/- A ball is dropped from a height of three meters with no initial velocity. Prove that it takes
+  less than one second for it to hit the ground. -/
+
+example (h : x = v * t + 1 / 2 * a * t ^ (2:ℝ)) (h1 : x = 3 ∧ v = 0 ∧ a = 9.8) : t < 1 := by
+  rw [h1.1, h1.2.1, h1.2.2, zero_mul, zero_add, mul_comm, ← div_eq_iff (by positivity)] at h
+  have hi1 : (3 : ℝ) / (1 / 2 * 9.8) < 1 := by
+    rw [← sub_neg]
+    norm_num
+  have hi2 : |t| < 1 := by aesop
+  exact (abs_lt.mp hi2).2
+
+/- Prove there does not exist a resistor with resistance x such that when placed in parallel with
+  itself will obtain the same total resistance as when placed in series. -/
+
+/- Note : This is an interesting problem because it showcases Lean's faithfulness to pure
+-- mathematics. Technically, there does exist a real number that allows parallel resistance to equal
+-- series; that number is zero. However, 1 / 0 in Lean just calculates to 0 which does not correlate
+-- with the real world. Additionally, zero and negative resistance (as far as I know) don't exist.
+  -/
+example
+  (h1 : Rₚ = fun (x:ℝ) => (1 / x + 1 / x)⁻¹)
+  (h2 : Rₛ = fun (x:ℝ) => x + x)
+  : ¬ ∃ (x:ℝ), x ≠ 0 ∧ Rₚ x = Rₛ x := by
+    have h : 1 / 2 ≠ (2:ℝ) := by norm_num
+    simp only [h1, h2, one_div, not_exists]
+    rintro x ⟨hx1, hx2⟩
+    rw [show x + x = 2 * x by ring, show x⁻¹ + x⁻¹ = 2 * x⁻¹ by ring, ← one_div, mul_comm,
+      ← div_div, one_div, inv_inv, ← propext (mul_inv_eq_iff_eq_mul₀ hx1), div_mul_eq_mul_div,
+      mul_inv_cancel hx1] at hx2
+    contradiction
+
+/- Hooke's Law states that the force of a compressed / stretched spring is proportional to the
+  distance from equilibrium. Prove that the force of the spring is the negative derivative of the
+  energy with respect to the distance. -/
+
+example
+  (h1 : F = - k * x)
+  (h2 : E = fun (x:ℝ) => (k * x ^ 2) / 2)
+  : F = - deriv E x := by
+    simp only [h1, h2, neg_mul, deriv_div_const, differentiableAt_const, differentiableAt_id',
+      DifferentiableAt.pow, deriv_mul, deriv_const', zero_mul, deriv_pow'', Nat.cast_ofNat,
+      Nat.succ_sub_succ_eq_sub, tsub_zero, pow_one, deriv_id'', mul_one, zero_add, neg_inj]
+    rw [mul_div_assoc, mul_div_right_comm, div_self (by positivity), one_mul]
