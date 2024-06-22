@@ -26,22 +26,21 @@ These tactics are useful for organizing Lean infoview and they do not necessaril
     cross
 -/
 
-example (hx : 0 < x) (hy : 0 < y) : 0 < x*y + 1 := by
-  have hxy : 0 < x*y := by
-    simp_all only [gt_iff_lt, mul_pos_iff_of_pos_left]
+example (hx : 0 < x) (hy : 0 < y) : 0 < x * y + 1 := by
+  have hxy : 0 < x * y := Real.mul_pos hx hy
   clear hx -- deletes hx
   clear hy -- deletes hy
-  refine add_pos hxy (by positivity)
+  exact add_pos hxy (by positivity)
 
 example (hm : 0 < m) : n ∣ m → n < m ∨ n = m := by
   show_term aesop -- shows the user what aesop is doing in the infoview
+  -- TIP : You should never do what I did. One should never use aesop in a non-terminal manner; if it didn't
+  -- solve the goal don't use it.
   rw [← le_iff_lt_or_eq]
   refine le_of_dvd hm a
 
-example (hx : 0 < x) (hy : 0 ≠ y) : x + y - x*y / (x*y) = x + y - x^0 := by
-  have h1 : x^0 = 1 := by exact rfl
-  rw [h1]
-  clear h1 -- deletes h1 to clean up the infoview
+example (hx : 0 < x) (hy : 0 ≠ y) : x + y - x * y / (x * y) = x + y - x ^ 0 := by
+  rw [pow_zero]
   show_term field_simp -- shows what field_simp did to complete the goal
 
 example : ∀ n : ℕ, ∃ m : ℕ, n + m = n := by
@@ -66,32 +65,34 @@ These tactics are useful for replacing / rewriting terms in a hypothesis or goal
     · simp_all : Is a stronger version of `simp [*]`
   · simp_rw : Simp and rw; allows the user to manipulate the interior of function definitions, sums,
       etc.
+
+Styling Notes : You should only ever use the `only` version of a `simp` or `dsimp` call to reduce
+  runtime. That means `simp_all` and `simp [*]` should be avoided entirely in professional work.
 -/
 
-example (hy : y = 2) : y*x^y / y = x^2 := by
+example (hy : y = 2) : y * x ^ y / y = x ^ 2 := by
   nth_rw 2 [hy] -- replaces the second instance of y (x^y) with 2 (x^2)
   rw [mul_comm] -- rewrites the order of the multiplication using the commutation lemma `mul_comm`
-  simp [mul_div_assoc] -- rewrites x^2 * y/y to x^2*(y/y) using the lemma `mul_div_assoc`
+  simp only [mul_div_assoc] -- rewrites x^2 * y/y to x^2*(y/y) using the lemma `mul_div_assoc`
   rw [show y / y = 1 by apply div_self (by linarith)] -- the `show` tactic is useful for proving
     -- the goal directly in the `rw []` statement
-  ring
+  simp only [rpow_two, mul_one]
 
 def OneSet (S : Set ℕ) : Prop := ∀ s ∈ S, s = 1
 
 example : S = {1} → OneSet S := by
-  dsimp [OneSet] -- replaces the OneSet term with its definition
-  intros
-  rename_i hs s hs1
-  aesop_subst hs
-  simp_all only [Set.mem_singleton_iff]
+  dsimp only [OneSet] -- replaces the OneSet term with its definition
+  rintro h s hs
+  rw [h] at hs -- rewrites h at hs; notice how the Set S becomes {1}
+  exact hs
 
 example (hx : 0 < x) (hx1 : y * x / x < 3) : -6 < -2*y := by
   rw [mul_div_assoc] at hx1 -- rewrites the hx1 hypothesis with the lemma `mul_div_assoc`
-  rw [show x/x = 1 by exact div_self (ne_of_gt hx), mul_one] at hx1
+  rw [show x / x = 1 by exact div_self (ne_of_gt hx), mul_one] at hx1
   clear hx
   rw [neg_mul, neg_lt_neg_iff]
   calc
-    2*y = y + y := by ring
+    2 * y = y + y := by ring
     _   < 3 + 3 := by rel [hx1] -- replaces the y with its inequality in hx1
     _   = 6 := by norm_num
 
@@ -112,19 +113,25 @@ These tactics change the hypothesis or goal completely by transforming it into a
   · refine : same as apply but gives the option to set a hypothesis of a lemma as a goal
   · rfl : tells Lean that two objects are equivalent
   · suffices : sets up a separate tactic space to prove a separate future goal
+
+Styling Notes : `exact` should be used if the goal is cleared by the lemma. `apply` should be used
+  if it changes the goal, but does not clear it. `refine` should not be used in professional work.
 -/
 
 example [TopologicalSpace α] (h : IsOpen A) : IsClosed Aᶜ := by
   exact isClosed_compl_iff.mpr h -- "exact" applies the exact lemma needed to close the goal but
     -- gives an error if it can't fully close it
 
-example (hy : 0 < y) : Tendsto (fun x:ℝ => (x^(2:ℝ) - 1)⁻¹) (nhdsWithin 1 (Set.Ioo 1 2)) atTop
+-- TIP : The above goal can be written as such instead removing the need for a tactic block.
+example [TopologicalSpace α] (h : IsOpen A) : IsClosed Aᶜ := isClosed_compl_iff.mpr h
+
+example : Tendsto (fun x:ℝ => (x^(2:ℝ) - 1)⁻¹) (nhdsWithin 1 (Set.Ioo 1 2)) atTop
   := by
     suffices Tendsto (fun x:ℝ => ((x + 1)*(x - 1))⁻¹) (nhdsWithin 1 (Set.Ioo 1 2)) atTop by
       -- allows us to show that the above is equivalent to the original goal
       apply this.congr'
       rw [eventuallyEq_nhdsWithin_iff]
-      filter_upwards with x hx
+      filter_upwards with x _
       -- Useful for filter proofs but I'm not sure what it exactly does
       field_simp
       ring
@@ -148,7 +155,6 @@ example (hy : 0 < y) : Tendsto (fun x:ℝ => (x^(2:ℝ) - 1)⁻¹) (nhdsWithin 1
       -- separates hx into two independent useful hypotheses
       have h1 : 0 < x + 1 := by linarith
       -- sets up an intermediate step for the proof that can be useful later
-      have h2 : 0 < x - 1 := by linarith
       aesop
 
 /- # Logic #
@@ -179,7 +185,7 @@ These tactics focus on manipulating the logic in goals such as 'for all' (∀), 
       since Nat doesn't work with subtraction very well
 -/
 
-example (h : 1 = 0) : ((x < y → -2*x > -2*y) ∨ 0 = 1) ∧ 1 = 0:= by
+example (h : 1 = 0) : ((x < y → -2 * x > -2 * y) ∨ 0 = 1) ∧ 1 = 0 := by
   constructor -- dismantles the add statement into two hypotheses
   · left -- sets the left side of the or statement as the goal
     contrapose -- reverses the implication using contrapositive
@@ -188,6 +194,10 @@ example (h : 1 = 0) : ((x < y → -2*x > -2*y) ∨ 0 = 1) ∧ 1 = 0:= by
     linarith
   · exfalso -- transforms the goal into false
     contradiction -- proves the goal is false because 1 ≠ 0
+
+-- TIP : Anything can be proven to be true when our hypotheses are false. This is known as a vacuous
+-- truth. The above can be simplified to.
+example (h : 1 = 0) : ((x < y → -2 * x > -2 * y) ∨ 0 = 1) ∧ 1 = 0 := by contradiction
 
 example : ∃! (n : ℂ), n + 1 = 2 := by
   use 1 -- provides 1 as the witness to the existance statement
@@ -220,36 +230,43 @@ These tactics perform a combination of tactics to best simplify and solve the go
   · aesop : Useful for solving seemingly simple goals that one does not know the lemmas for
   · calc : Sets up a `calc` block in which the user can write a line-by-line proof
   · field_simp : Used for fields and thus is useful for statements including a division
-  · fun_prop
+  · fun_prop : Used for basic differential statements
   · gcongr : Useful for linear inequalities
   · linarith : Useful for linear equations and especially linear inequalities
+    · nlinarith [hx, hy] : Stronger version of `linarith` that can deal with nonlinear inequalities;
+      that can be supplemented with hypotheses.
+  · omega : Useful for proving properties about natural numbers
   · polyrith : Useful for polynomial expressions
   · positivity : Proves goals such as `0 ≤ x`, `0 ≠ x`, `0 < x` using preexisting lemmas /
       hypotheses
   · ring : Used for rings and is especially useful for dealing with arithmetic goals
+    · ring! : Stronger version of `ring`
+    · ring_nf : Can be used when goal is not completed by `ring` alone
+    · ring_nf! : Stronger version of `ring_nf`
   · tauto : Used for logical goals and executes several lemmas and tactics to prove logical
       equivalence
+
+Styling Notes : One should use `nlinarith` in the place of `linarith`. `field_simp` should only be
+  used when writing proofs about rational, real, and complex numbers as those are proper fields.
+  Natural and integer numbers are not fields, and are instead rings. If you can, try to avoid using
+  these tactics as they increase runtime by a lot; one should instead opt for more specific tactics
+  that tell Lean exactly what to do to prove the goal. For example, `rw` and `exact` are much
+  preferred over `ring_nf!` and `field_simp`.
 -/
 
 example (hw : w ∈ Ioo (0:ℝ) z) (hz : 0 < z) (hx : x ∈ Ioo (0 : ℝ) (z/2)) (hy : y ∈ Ioo w (z - 1)) :
   (1 + w*x/x) * y < z^2 - 1 := by
-    aesop
-    have h : 0 < y := by
-      exact lt_trans left left_2
-    have h1 : 1 + w*x/x < z + 1 := by
-      rw [show w*x/x = w by field_simp]
-      rw [add_comm]
-      gcongr
-    have h2 : y < z - 1 := by
-      linarith
-    calc
-      (1 + w*x/x) * y < (z + 1) * y := by refine mul_lt_mul_of_pos_right h1 ?a0; positivity
-      _               < (z + 1) * (z - 1) := by gcongr
-      _               = z^2 - 1 := by ring
+    aesop -- Again one should not do this; it's ugly and bad for runtime. I include here just for
+    -- demonstration
+    ring_nf
+    field_simp
+    nlinarith
 
 example : ¬ (P ∨ Q) ↔ ¬ P ∧ ¬ Q := by tauto
 
 example (hx : x < y - 3) : 2 + x < y - 1 := by linarith
+
+example (h : n < m) : n + 2 < 3 * m := by omega
 
 
 /- # Cases #
@@ -263,8 +280,6 @@ These tactics separate the goal into steps (i.e. cases) that can be solved indiv
       one goal when the hypothesis is true and another when the hypothesis is false
   · fin_cases
   · induction : Splits the goal into cases (as far as I know it does the same thing as cases)
-  · match _ with
-  · mod_cases
 -/
 example : ∀ n : ℕ, 0 ≤ n ∧ ∃ m, n = m := by
   intro n
@@ -278,7 +293,7 @@ example (n : ℕ) : ∑ i in Finset.range (n + 1), i = n * (n + 1) / 2 := by
   | succ n ih =>
     symm
     apply Nat.div_eq_of_eq_mul_right two_pos
-    rw [Finset.sum_range_succ, ih, Nat.succ_eq_add_one, mul_add 2]
+    rw [Finset.sum_range_succ, ih, mul_add 2]
     rw [show n + 1 + 1 = n + 2 by rw [Nat.add_right_cancel_iff]]
     have hle : 2 * (n + 1) ≤ (n + 1) * (n + 2) := by
       have : 0 < n + 1 := by
@@ -362,9 +377,6 @@ Here are my solutions to the above practice problems. Have in mind that there ar
 
 example (hx : 0 < x) (hy : 0 < y) : sqrt (x*y) ≤ (x + y)/2 := by
   have h : 0 ≤ (x - y)^2 := by exact sq_nonneg (x - y)
-  have h1 : (x - y)^2 = (x + y)^2 - 4*x*y := by ring
-  have h2 : 0 ≤ (x + y)^2 - 4*x*y := by
-    rw [← h1]; assumption
   refine sqrt_le_iff.mpr ?_
   constructor
   · linarith
@@ -396,15 +408,15 @@ example : ∃! x : ℝ, 2*x + 1 = 4*x - 3 := by
 example : 0 ≤ ∑ i in range n, f i^2 := by
   rw [show (0:ℝ) = ∑ i in range n, 0 by aesop]
   refine sum_le_sum ?h
-  intro i hi
+  intro i _
   apply sq_nonneg
 
 example (h : ∀ i, f i = g i) :
   ∑ i in range (n + 1), f i = ∑ i in range (n + 1), g i
-    := by exact sum_congr rfl fun x a => h x
+    := by exact sum_congr rfl fun x _ => h x
 
 example (S : Set ℕ) : 0 ≤ ∑ᶠ i ∈ S, i := by
-  simp_all only [_root_.zero_le]
+  simp only [_root_.zero_le]
 
 example : A ∪ (B ∩ C) = (A ∪ B) ∩ (A ∪ C) := by
   apply subset_antisymm
@@ -442,8 +454,9 @@ example : (A ∪ B)ᶜ = (Aᶜ ∩ Bᶜ) := by
     rw [mem_compl_iff] at *
     simp only [Set.mem_union, not_or] at ha
     obtain ⟨ha1, ha2⟩ := ha
-    constructor
-    <;> {rw [mem_compl_iff]; assumption}
+    constructor <;>
+    rw [mem_compl_iff] <;>
+    assumption
   · intro a ha
     rcases ha with ⟨ha1, ha2⟩
     rw [mem_compl_iff] at *
@@ -463,7 +476,7 @@ example (hy : 0 < y) :
     refine Filter.Tendsto.inv_tendsto_zero ?_
     rw [nhdsWithin]
     apply Filter.Tendsto.inf
-    · rw [show 0 = 1 - y*y⁻¹ by field_simp]
+    · rw [show 0 = 1 - y * y⁻¹ by field_simp]
       apply Filter.Tendsto.sub
       · exact tendsto_const_nhds
       · apply Filter.Tendsto.mul
@@ -472,7 +485,7 @@ example (hy : 0 < y) :
     · refine tendsto_principal_principal.mpr ?h₂.a
       intro x hx
       rw [Set.mem_Ioi]
-      rcases hx with ⟨hx1, hx2⟩
+      rcases hx with ⟨_, hx2⟩
       have h' : y*x < y*y⁻¹ := by exact (mul_lt_mul_left hy).mpr hx2
       field_simp at h'
       aesop
