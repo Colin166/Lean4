@@ -387,7 +387,16 @@ example {m : ℤ} (h : ∃ a, 2 * a = m) : m ≠ 5 := by
     contradiction
 -- 8
 example {n : ℤ} : ∃ a, 2 * a ^ 3 ≥ n * a + 7 := by
-  sorry
+  use (n ^ 2 + 2)
+  ring_nf!
+  have _ : 0 ≤ n ^ 2 * 24 := by nlinarith
+  have h1 : 0 ≤ n ^ 4 * 12 := by nlinarith
+  have h2 : 0 ≤ n ^ 6 * 2 := by nlinarith
+  by_cases hn : n ≤ 0
+  · simp only [ge_iff_le]
+    nlinarith
+  · rw [not_le] at hn
+    nlinarith
 -- 9
 example {a b c : ℝ} (ha : a ≤ b + c) (hb : b ≤ a + c) (hc : c ≤ a + b) :
     ∃ x y z, x ≥ 0 ∧ y ≥ 0 ∧ z ≥ 0 ∧ a = y + z ∧ b = x + z ∧ c = x + y := by
