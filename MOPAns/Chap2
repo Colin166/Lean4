@@ -36,6 +36,14 @@ example (a b : ℝ) (h1 : -b ≤ a) (h2 : a ≤ b) : a ^ 2 ≤ b ^ 2 := by
   calc
     a ^ 2 ≤ a ^ 2 + (b + a) * (b - a) := by nlinarith
     _     = b ^ 2 := by ring
+/-! TIP : The extraneous hypotheses (underlined in yellow in VSCode) can be replaced with
+  underscores. -/
+example (a b : ℝ) (h1 : -b ≤ a) (h2 : a ≤ b) : a ^ 2 ≤ b ^ 2 := by
+  have _ : 0 ≤ b + a := neg_le_iff_add_nonneg'.mp h1
+  have _ : 0 ≤ b - a := sub_nonneg_of_le h2
+  calc
+    a ^ 2 ≤ a ^ 2 + (b + a) * (b - a) := by nlinarith
+    _     = b ^ 2 := by ring
 /-! NOTE : The book tactics are different from Mathlib. This is why `nlinarith` is so powerful. -/
 example (a b : ℝ) (h1 : -b ≤ a) (h2 : a ≤ b) : a ^ 2 ≤ b ^ 2 := by nlinarith
 
@@ -59,7 +67,7 @@ example {x : ℚ} (h1 : x ^ 2 = 4) (h2 : 1 < x) : x = 2 := by
   nlinarith -- If using book specific tactics, use `cancel` here.
 -- 2
 example {n : ℤ} (hn : n ^ 2 + 4 = 4 * n) : n = 2 := by
-  have h : (n - 2) ^ 2 = 0 := by nlinarith
+  have _ : (n - 2) ^ 2 = 0 := by nlinarith
   have h' : (n - 2) = 0 := by nlinarith
   nlinarith
 -- 3
@@ -257,7 +265,7 @@ example {a b : ℝ} (h1 : a ^ 2 + b ^ 2 = 0) : a = 0 ∧ b = 0 := by
   constructor
   · exact pow_eq_zero h2
   · exact pow_eq_zero h3
-/- TIP : The final step can be condensed. -/
+/-! TIP : The final step can be condensed. -/
 example {a b : ℝ} (h1 : a ^ 2 + b ^ 2 = 0) : a = 0 ∧ b = 0 := by
   have h2 : a ^ 2 = 0
   · apply le_antisymm
@@ -313,26 +321,23 @@ example {a b : ℝ} (h1 : a * b = a) (h2 : a * b = b) :
   simp_all only [and_self]
   subst h1
   exact IsIdempotentElem.iff_eq_zero_or_one.mp h2
-/- TIP : `aesop?` and `apply?` were used to get the tactics above. -/
+/-! TIP : `aesop?` and `apply?` were used to get the tactics above. -/
 
 -- 2.5.2 Example
 example {t : ℝ} (h : ∃ a : ℝ, a * t < 0) : t ≠ 0 := by
   obtain ⟨x, hxt⟩ := h
   have H := le_or_gt x 0
-  obtain hx | hx := H
-  · have hxt' : 0 < (-x) * t := by nlinarith
-    have hx' : 0 ≤ -x := by nlinarith
-    nlinarith
-  · nlinarith
+  obtain hx | hx := H <;>
+  nlinarith
 
 -- 2.5.5 Example
 example : ∃ m n : ℤ, m ^ 2 - n ^ 2 = 11 := by
   use 6
   use 5
   ring
-/- TIP : Existential witnesses can be put into `exact` statements. -/
+/-! TIP : Existential witnesses can be put into `exact` statements. -/
 example : ∃ m n : ℤ, m ^ 2 - n ^ 2 = 11 := by exact ⟨6, 5, rfl⟩
-/- TIP : The `exact` is not necessary either. -/
+/-! TIP : The `exact` is not necessary either. -/
 example : ∃ m n : ℤ, m ^ 2 - n ^ 2 = 11 := ⟨6, 5, rfl⟩
 
 -- 2.5.6 Example
@@ -340,7 +345,7 @@ example (a : ℤ) : ∃ m n : ℤ, m ^ 2 - n ^ 2 = 2 * a + 1 := by
   use (a + 1)
   use a
   ring
-/- TIP : A tactic can be applied in the shortened `exact` statement using a `by`. -/
+/-! TIP : A tactic can be applied in the shortened `exact` statement using a `by`. -/
 example (a : ℤ) : ∃ m n : ℤ, m ^ 2 - n ^ 2 = 2 * a + 1 := ⟨(a + 1), a, by ring⟩
 
 -- 2.5.7 Example
@@ -363,7 +368,7 @@ example (x : ℚ) : ∃ y : ℚ, y ^ 2 > x := by
   ring_nf
   nlinarith
 -- 6
-/- TIP : A simple way to prove this statement is through contradiction. -/
+/-! TIP : A simple way to prove this statement is through contradiction. -/
 example {t : ℝ} (h : ∃ a : ℝ, a * t + 1 < a + t) : t ≠ 1 := by
   obtain ⟨a, ha⟩ := h
   intro ht
