@@ -37,3 +37,25 @@ example (hx : x ≠ 0) : deriv (fun x => x ^ (-2 : ℝ)) x = (-2) * x ^ (-3 : �
 example (hx : x ≠ 0) : deriv (fun x => x ^ (-2 / 3 : ℝ)) x = (-2 / 3) * x ^ (-5 / 3 : ℝ) := by
   rw [show (-5 / 3 : ℝ) = - 2 / 3 - 1 by ring]
   refine Real.deriv_rpow_const (by left; assumption)
+
+/-! Chain rules begin with `rw [deriv_mul]` -/
+example : deriv (fun x => x * sin x) x = sin x + x * cos x := by
+  rw [deriv_mul]
+  · simp only [deriv_id'', one_mul, Real.deriv_sin]
+  · fun_prop
+  · exact differentiableAt_sin
+
+example : deriv (fun x => x ^ 2 * cos x) x = 2 * x * cos x - x ^ 2 * sin x := by
+  rw [deriv_mul]
+  · simp only [differentiableAt_id', deriv_pow'', Nat.cast_ofNat, Nat.reduceSub, pow_one,
+    deriv_id'', mul_one, deriv_cos', mul_neg]
+    ring
+  · fun_prop
+  · exact differentiableAt_cos
+
+example : deriv (fun x => sin x * cos x) x = (cos x) ^ 2 - (sin x) ^ 2 := by
+  rw [deriv_mul]
+  · simp only [Real.deriv_sin, deriv_cos', mul_neg]
+    ring
+  · exact differentiableAt_sin
+  · exact differentiableAt_cos
