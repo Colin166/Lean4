@@ -104,7 +104,7 @@ example : Tendsto (fun x:ℝ => (x^(2:ℝ) - 1)⁻¹) (nhdsWithin 1 (Set.Ioo 1 2
     /- The next three lines are necessary for the "suffices tactic" -/
     apply this.congr'
     rw [eventuallyEq_nhdsWithin_iff]
-    filter_upwards with x hx
+    filter_upwards with x _
     /- The above set my new statement and the original statement to be equivalent (which we prove
       the next two lines) -/
     field_simp
@@ -174,7 +174,7 @@ example (hy : 0 < a) : Tendsto (fun x => (a*x - 1)⁻¹) (nhdsWithin (a⁻¹) (S
     · refine tendsto_principal_principal.mpr ?h₂.a
       intro x hx
       rw [Set.mem_Ioi]
-      rcases hx with ⟨hx1, hx2⟩
+      rcases hx with ⟨_, hx2⟩
       have h' : a*x < a*a⁻¹ := by exact (mul_lt_mul_left hy).mpr hx2
       field_simp at h'
       aesop
@@ -215,7 +215,6 @@ example : Tendsto (fun x:ℝ => x / (x^3 - 1)) (nhdsWithin 1 (Set.Iio 1)) atBot 
     · refine tendsto_principal_principal.mpr ?h₂.a
       intro x hx
       simp [Set.mem_Ioi] at *
-      have h1 : 0 < (-x + 1) := by linarith
       have h2 : 0 < (x^2 + x + 1) := by
         rw [show (x^2 + x + 1) = x*(x + 1) + 1 by ring]
         by_cases hx : -1/2 ≤ x
@@ -228,12 +227,11 @@ example : Tendsto (fun x:ℝ => x / (x^3 - 1)) (nhdsWithin 1 (Set.Iio 1)) atBot 
             _              < 2*(1/2) := by gcongr
             _              = 1 := by ring
         · rw [not_le] at hx
-          have h' : x < 0 := by linarith
           by_cases hx : x ≤ -1
           · have h'' : x + 1 ≤ 0 := by linarith
             have h''' : x ≤ 0 := by linarith
             have h'''' : 0 ≤ x*(x+1) := by exact
-              mul_nonneg_iff_neg_imp_nonpos.mpr { left := fun a => h'', right := fun a => h''' }
+              mul_nonneg_iff_neg_imp_nonpos.mpr { left := fun _ => h'', right := fun _ => h''' }
             linarith
           · rw [not_le] at hx
             have h'' : 0 < x + 1 := by linarith
