@@ -3,64 +3,66 @@ Copyright (c) 2024 Colin Jones. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Colin Jones
 -/
-import Mathlib.NumberTheory.Divisors
-import Mathlib.Tactic.NormNum.Prime
 import Mathlib.Algebra.GeomSum
+import Mathlib.Algebra.IsPrimePow
+import Mathlib.NumberTheory.Divisors
 import Mathlib.Tactic.FinCases
+import Mathlib.Tactic.NormNum.Prime
 
 /-!
 # Factorisation properties of natural numbers
+
 This file defines abundant, pseudoperfect, deficient, and weird numbers and formalizes their
-  relations with prime and perfect numbers.
+relations with prime and perfect numbers.
 
 ## Main Definitions
-* `Nat.Abundant`: a natural number `n` is _abundant_ if the sum of its proper divisors are greater
+
+* `Nat.Abundant`: a natural number `n` is _abundant_ if the sum of its proper divisors is greater
   than `n`
-* `Nat.Pseudoperfect`: a natural number `n` is _pseudoperfect_ if a subset of its proper divisors
-  equals `n`
+* `Nat.Pseudoperfect`: a natural number `n` is _pseudoperfect_ if the sum of a subset of its proper
+  divisors equals `n`
 * `Nat.Deficient`: a natural number `n` is _deficient_ if the sum of its proper divisors is less
   than `n`
-* `Nat.Weird`: a natural number is _weird_ if it is both abundant but not pseudoperfect
+* `Nat.Weird`: a natural number is _weird_ if it is abundant but not pseudoperfect
 
 ## Main Results
+
 * `Nat.deficient_or_perfect_or_abundant`: A positive natural number is either deficient,
   perfect, or abundant.
-* `Nat.prime_deficient`: All prime natural numbers are deficient.
-* `Nat.exists_infinite_deficients`: There are infinitely many deficient numbers.
-* `Nat.prime_pow_deficient`: Any natural number power of a prime is deficient.
+* `Nat.Prime.deficient`: All prime natural numbers are deficient.
+* `Nat.infinite_deficient`: There are infinitely many deficient numbers.
+* `Nat.Prime.deficient_pow`: Any natural number power of a prime is deficient.
 
 ## Implementation Notes
 * Zero is not included in any of the definitions and these definitions only apply to natural
   numbers greater than zero.
 
 ## References
-* Prielipp, Robert W. “PERFECT NUMBERS, ABUNDANT NUMBERS, AND DEFICIENT NUMBERS.”
-  The Mathematics Teacher, vol. 63, no. 8, 1970, pp. 692–96. JSTOR,
-  http://www.jstor.org/stable/27958492. Accessed 21 Feb. 2024.
+* [R. W. Prielipp, *PERFECT NUMBERS, ABUNDANT NUMBERS, AND DEFICIENT NUMBERS*][Prielipp1970]
 
 ## Tags
 
 abundant, deficient, weird, pseudoperfect
 -/
 
-open BigOperators Finset
+open Finset
 
 namespace Nat
 
 variable {n m p : ℕ}
 
 /-- `n : ℕ` is _abundant_ if the sum of the proper divisors of `n` is greater than `n`. -/
-def Abundant (n : ℕ) : Prop := ∑ i in properDivisors n, i > n
+def Abundant (n : ℕ) : Prop := n < ∑ i ∈ properDivisors n, i
 
 /-- `n : ℕ` is _deficient_ if the sum of the proper divisors of `n` is less than `n`. -/
-def Deficient (n : ℕ) : Prop := ∑ i in properDivisors n, i < n
+def Deficient (n : ℕ) : Prop := ∑ i ∈ properDivisors n, i < n
 
 /-- A positive natural number `n` is _pseudoperfect_ if there exists a subset of the proper
   divisors of `n` such that the sum of that subset is equal to `n`. -/
 def Pseudoperfect (n : ℕ) : Prop :=
   0 < n ∧ ∃ s ⊆ properDivisors n, ∑ i ∈ s, i = n
 
-/-- `n : ℕ` is a _weird_ number if and only if it is both abundant and pseudoperfect. -/
+/-- `n : ℕ` is a _weird_ number if and only if it is abundant but not pseudoperfect. -/
 def Weird (n : ℕ) : Prop := Abundant n ∧ ¬ Pseudoperfect n
 
 theorem not_pseudoperfect_iff_forall :
@@ -68,18 +70,16 @@ theorem not_pseudoperfect_iff_forall :
   rw [Pseudoperfect, not_and_or]
   simp only [not_lt, nonpos_iff_eq_zero, mem_powerset, not_exists, not_and, ne_eq]
 
-theorem Deficient_one : Deficient 1 := zero_lt_one
+theorem deficient_one : Deficient 1 := zero_lt_one
+theorem deficient_two : Deficient 2 := one_lt_two
+theorem deficient_three : Deficient 3 := by norm_num [Deficient]
 
-theorem Deficient_two : Deficient 2 := one_lt_two
-
-theorem Deficient_three : Deficient 3 := by norm_num [Deficient]
-
-theorem Abundant_twelve : Abundant 12 := by
+theorem abundant_twelve : Abundant 12 := by
   rw [Abundant, show properDivisors 12 = {1,2,3,4,6} by rfl]
   norm_num
 
 set_option maxRecDepth 1730 in
-theorem Weird_seventy : Weird 70 := by
+theorem weird_seventy : Weird 70 := by
   rw [Weird, Abundant, not_pseudoperfect_iff_forall]
   have h : properDivisors 70 = {1, 2, 5, 7, 10, 14, 35} := by rfl
   constructor
@@ -91,57 +91,56 @@ theorem Weird_seventy : Weird 70 := by
     have hs' := mem_powerset.mpr hs
     fin_cases hs' <;> decide
 
-lemma deficient_not_abundant_or_perfect (hn : 0 < n) :
+lemma deficient_iff_not_abundant_and_not_perfect (hn : n ≠ 0) :
     Deficient n ↔ ¬ Abundant n ∧ ¬ Perfect n := by
   dsimp only [Perfect, Abundant, Deficient]
   omega
 
-lemma perfect_not_abundant_or_deficient (hn : 0 < n) :
+lemma perfect_iff_not_abundant_and_not_deficient (hn : 0 ≠ n) :
     Perfect n ↔ ¬ Abundant n ∧ ¬ Deficient n := by
   dsimp only [Perfect, Abundant, Deficient]
   omega
 
-lemma abundant_not_perfect_or_deficient (hn : 0 < n) :
+lemma abundant_iff_not_perfect_and_not_deficient (hn : 0 ≠ n) :
     Abundant n ↔ ¬ Perfect n ∧ ¬ Deficient n := by
   dsimp only [Perfect, Abundant, Deficient]
   omega
 
 /-- A positive natural number is either deficient, perfect, or abundant -/
-theorem deficient_or_perfect_or_abundant (hn : 0 < n) :
+theorem deficient_or_perfect_or_abundant (hn : 0 ≠ n) :
     Deficient n ∨ Abundant n ∨ Perfect n := by
   dsimp only [Perfect, Abundant, Deficient]
   omega
 
-theorem perfect_pseudoperfect (h : Perfect n) : Pseudoperfect n :=
+theorem Perfect.pseudoperfect (h : Perfect n) : Pseudoperfect n :=
   ⟨h.2, ⟨properDivisors n, ⟨fun ⦃_⦄ a ↦ a, h.1⟩⟩⟩
 
-theorem prime_not_abundant (h : Prime n) : ¬ Abundant n :=
+theorem Prime.not_abundant (h : Prime n) : ¬ Abundant n :=
   fun h1 ↦ (h.one_lt.trans h1).ne' (sum_properDivisors_eq_one_iff_prime.mpr h)
 
-theorem prime_not_weird (h : Prime n) : ¬ Weird n := by
+theorem Prime.not_weird (h : Prime n) : ¬ Weird n := by
   simp only [Nat.Weird, not_and_or]
   left
-  exact prime_not_abundant h
+  exact h.not_abundant
 
-theorem prime_not_pseudoperfect (h : Prime p) : ¬ Pseudoperfect p := by
+theorem Prime.not_pseudoperfect (h : Prime p) : ¬ Pseudoperfect p := by
   simp_rw [not_pseudoperfect_iff_forall, ← mem_powerset,
-    show powerset (properDivisors p) = {∅, {1}} by rw [Prime.properDivisors h]; rfl]
+    show p.properDivisors.powerset = {∅, {1}} by rw [Prime.properDivisors h]; rfl]
   refine Or.inr (fun s hs ↦ ?_)
   fin_cases hs <;>
   simp only [sum_empty, sum_singleton] <;>
   linarith [Prime.one_lt h]
 
-theorem prime_not_perfect (h : Prime p) : ¬ Perfect p := by
-  have h1 := prime_not_pseudoperfect h
+theorem Prime.not_perfect (h : Prime p) : ¬ Perfect p := by
+  have h1 := Prime.not_pseudoperfect h
   revert h1
-  exact not_imp_not.mpr (perfect_pseudoperfect)
+  exact not_imp_not.mpr (Perfect.pseudoperfect)
 
 /-- Any natural number power of a prime is deficient -/
-theorem prime_pow_deficient (h : Prime n) : Deficient (n ^ m) := by
-  rcases Nat.eq_zero_or_pos m with (hL | _)
-  · rw [hL, Nat.pow_zero]
-    exact Deficient_one
-  · have h1 : properDivisors (n ^ m) = image (n ^ ·) (range m) := by
+theorem Prime.deficient_pow  (h : Prime n) : Deficient (n ^ m) := by
+  rcases Nat.eq_zero_or_pos m with (rfl | _)
+  · simpa using deficient_one
+  · have h1 : (n ^ m).properDivisors = image (n ^ ·) (range m) := by
       apply subset_antisymm <;> intro a
       · simp only [mem_properDivisors, mem_image, mem_range, dvd_prime_pow h]
         rintro ⟨⟨t, ht, rfl⟩, ha'⟩
@@ -155,10 +154,8 @@ theorem prime_pow_deficient (h : Prime n) : Deficient (n ^ m) := by
           exact (Nat.pow_lt_pow_iff_right (Prime.two_le h)).mpr hx
     have h2 : ∑ i in image (fun x => n ^ x) (range m), i = ∑ i in range m, n^i := by
       rw [Finset.sum_image]
-      rintro x _ y _ hnxy
-      by_contra hc
-      rcases (Ne.lt_or_lt hc) with hx | hx <;>
-      linarith [(pow_lt_pow_iff_right (Prime.one_lt h)).mpr hx]
+      rintro x _ y _
+      apply pow_injective_of_not_unit h.not_unit <| Prime.ne_zero h
     rw [Deficient, h1, h2]
     calc
       ∑ i ∈ range m, n ^ i
@@ -166,28 +163,36 @@ theorem prime_pow_deficient (h : Prime n) : Deficient (n ^ m) := by
       _ ≤ (n ^ m - 1) := Nat.div_le_self (n ^ m - 1) (n - 1)
       _ < n ^ m := sub_lt (pow_pos (Prime.pos h) m) (Nat.one_pos)
 
-theorem prime_deficient (h : Prime n) : Deficient n := by
+theorem _root_.IsPrimePow.deficient (h : IsPrimePow n) : Deficient n := by
+  obtain ⟨p, k, hp, -, rfl⟩ := h
+  exact hp.nat_prime.deficient_pow
+
+theorem Prime.deficient (h : Prime n) : Deficient n := by
   rw [← pow_one n]
-  exact prime_pow_deficient h
+  exact h.deficient_pow
 
 /-- There exists infinitely many deficient numbers -/
-theorem exists_infinite_deficients : ∃ d, n ≤ d ∧ Deficient d := by
-  obtain ⟨p, ⟨h1, h2⟩⟩ := exists_infinite_primes n
-  exact ⟨p, h1, prime_deficient h2⟩
+theorem infinite_deficient : {n : ℕ | n.Deficient}.Infinite := by
+  rw [Set.infinite_iff_exists_gt]
+  intro a
+  obtain ⟨b, h1, h2⟩ := exists_infinite_primes a.succ
+  exact ⟨b, h2.deficient, h1⟩
 
-theorem exists_infinite_even_deficients : ∃ d, n ≤ d ∧ Deficient d ∧ Even d := by
+theorem infinite_even_deficient : {n : ℕ | Even n ∧ n.Deficient}.Infinite := by
+  rw [Set.infinite_iff_exists_gt]
+  intro n
   use 2 ^ (n + 1)
   constructor
+  · exact ⟨⟨2 ^ n, by ring⟩, prime_two.deficient_pow⟩
   · calc
       n ≤ 2 ^ n := Nat.le_of_lt (lt_two_pow n)
-      _ ≤ 2 ^ (n + 1) := le_of_succ_le ((Nat.pow_lt_pow_iff_right (Nat.one_lt_two)).mpr
-        (lt_add_one n))
-  · exact ⟨prime_pow_deficient prime_two, even_pow.mpr ⟨even_two, Ne.symm
-      (NeZero.ne' (n + 1))⟩⟩
+      _ < 2 ^ (n + 1) := (Nat.pow_lt_pow_iff_right (Nat.one_lt_two)).mpr (lt_add_one n)
 
-theorem exists_infinite_odd_deficients : ∃ d, n ≤ d ∧ Deficient d ∧ Odd d := by
-  obtain ⟨p, ⟨h1, h2⟩⟩ := exists_infinite_primes (max n 3)
-  exact ⟨p, le_of_max_le_left h1, ⟨prime_deficient h2, Prime.odd_of_ne_two h2 (Ne.symm (ne_of_lt
-    (le_of_max_le_right h1)))⟩⟩
+theorem infinite_odd_deficient : {n : ℕ | Odd n ∧ n.Deficient}.Infinite := by
+  rw [Set.infinite_iff_exists_gt]
+  intro n
+  obtain ⟨p, ⟨_, h2⟩⟩ := exists_infinite_primes (max (n + 1) 3)
+  exact ⟨p, Set.mem_setOf.mpr ⟨Prime.odd_of_ne_two h2 (Ne.symm (ne_of_lt (by omega))),
+    Prime.deficient h2⟩, by omega⟩
 
 end Nat
