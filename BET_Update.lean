@@ -8,6 +8,8 @@ open Set
 set_option maxHeartbeats 0
 
 /-!
+Updated from Max Bobbin's Code.
+
 # BET
 This section defines the Brunauer–Emmett–Teller (BET) adsorption theory where we relax the
 assumption of the [Langmuir model](./langmuir_kinetics.html) that restricts adsorption on a single
