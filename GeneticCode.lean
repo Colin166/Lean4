@@ -14,12 +14,17 @@ This file defines 2 functions called `codon` and `anticodon` that match a 3 lett
   of 4 letters (`U`, `A`, `G`, or `C`) with their respective amino acid.
 
 ## Main Definitions
-* `codon` : Matches the mRNA codon to the amino acid
-* `anticodon` : Matches the tRNA anticodon to the amino acid
+* `dna_to_rna`: Converts a coding strand of DNA into RNA
+* `rna_to_amino`: Takes a list of RNA triplets and converts them into a list of amino acids
+* `dna_to_rna`: Converts a coding strand of DNA into a sequence of amino acids
 
 ## Implementation Details
 This file assumes that the reading frame begins at the first nucleotide always and all lists are
-  5' → 3'.
+  5' → 3'. The function `dna_to_rna` takes the coding strand as an input, so it is 'read' backwards
+  from the 3' → 5' direction e.g. `[A, G, T]` becomes `[A, C, U]`. Proof has to be given
+  that the input is a valid DNA base or contains DNA bases in the functions: `dna_to_rna_singlet`,
+  `dna_to_rna`, and `dna_to_amino`. To prove this is true, include `(by aesop)` at the end of the
+  `#eval` function like this: `#eval dna_to_rna [A, G, T] (by aesop) -- will output [A, C, U]`.
 -/
 
 open Function Classical
