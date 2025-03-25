@@ -1,6 +1,7 @@
 This repository contains Lean 4 code written by Colin Jones, a member of the ATOMS lab.
 
 File Pathways
+- Examples: Contains example proofs for specific concepts like differentiation or limits
 - LfSEAns: Contains answer problems for Lean for Scientists and Engineers, a Summer program hosted by the ATOMS lab to promote Lean 4 and theorem proving software for scientists and engineers
 - MOPAns: Contains answers to the textbook, Mechanics of Proof by Heather Macbeth, an excellent book for non-math and novice math students to learn and study mathematics in Lean
 
