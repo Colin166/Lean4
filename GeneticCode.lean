@@ -1,6 +1,6 @@
 /-
 Authors: Colin Jones
-Last Updated: 06/10/2025
+Last Updated: 06/25/2025
 Description: Contains a function that allows the user to convert a coding strand of DNA into a
   sequence of RNA or amino acids. Proves the injectivity of mapping DNA to RNA and the redundancy
   (non-injectivity) of DNA and RNA to amino acid. Includes brief exploration of point mutations.
@@ -43,9 +43,10 @@ This file assumes that the reading frame begins at the first nucleotide always a
   5' → 3'. The function `dna_to_rna_template` takes the template strand as an input, so it is
   'read' backwards from the 3' → 5' direction e.g. `[A, G, T]` becomes `[A, C, U]`. Proof has to be
   given that the input is a valid DNA base or contains DNA bases in the functions:
-  `dna_to_rna_singlet`, `dna_to_rna_template`, and `dna_to_amino`. To prove this is true, include
-  `(by aesop)` at the end of the `#eval` function like this: `#eval dna_to_rna_template [A, G, T]
-  (by aesop). That particular input will output [A, C, U]` in the Lean InfoView.
+  `dna_to_rna_singlet`, `dna_to_rna_template`, `dna_to_rna_coding`, `dna_to_amino_template`, and
+  `dna_to_amino_coding`. To prove this is true, include `(by aesop)` at the end of the `#eval`
+  function like this: `#eval dna_to_rna_template [A, G, T] (by aesop)`. That particular input will
+  output `[A, C, U]` in the Lean InfoView.
 -/
 
 open Function Classical List
@@ -75,11 +76,11 @@ deriving instance Repr for AminoAcid
 
 
 /- # General Definitions # -/
-def NucBase.isRNABase (b : NucBase) : Bool := b matches U | A | G | C
+def NucBase.isRNABase : Bool := n matches U | A | G | C
 
-def NucBase.isDNABase (b : NucBase) : Bool := b matches T | A | G | C
+def NucBase.isDNABase : Bool := n matches T | A | G | C
 
-def Redundant (f : α → β) : Prop := ¬ Injective f
+def Redundant {α β} (f : α → β) : Prop := ¬ Injective f
 
 
 /- # DNA Function Definitions # -/
